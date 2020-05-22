@@ -1,0 +1,10 @@
+#!/bin/bash
+NET_OCT="253"
+VIR_NET="default"
+HOST_NET=$(ip -4 a s $(virsh net-info $VIR_NET | awk '/Bridge:/{print $2}') | awk '/inet /{print $2}')
+HOST_IP=$(echo $HOST_NET | cut -d '/' -f1)
+DNS_DIR="/etc/NetworkManager/dnsmasq.d"
+BASE_DOM="local"
+CLUSTER_NAME="ocp42"
+SSH_KEY="/root/.ssh/id_rsa.pub"
+WEB_PORT="12345"
