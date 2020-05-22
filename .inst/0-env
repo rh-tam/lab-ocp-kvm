@@ -1,0 +1,24 @@
+#!/bin/bash
+export NET_OCT="166"
+export VIR_NET="default"
+
+
+/usr/bin/cp /usr/share/libvirt/networks/default.xml /tmp/new-net.xml
+sed -i "s/default/ocp-${NET_OCT}/" /tmp/new-net.xml
+sed -i "s/virbr0/ocp-$NET_OCT/" /tmp/new-net.xml
+sed -i "s/122/${NET_OCT}/g" /tmp/new-net.xml
+virsh net-define /tmp/new-net.xml
+virsh net-autostart ocp-${NET_OCT}
+virsh net-start ocp-${NET_OCT}
+systemctl restart libvirtd
+
+
+
+
+export HOST_NET=$(ip -4 a s $(virsh net-info $VIR_NET | awk '/Bridge:/{print $2}') | awk '/inet /{print $2}')
+export HOST_IP=$(echo $HOST_NET | cut -d '/' -f1)
+export DNS_DIR="/etc/NetworkManager/dnsmasq.d"
+export BASE_DOM="local"
+export CLUSTER_NAME="ocp42"
+export SSH_KEY="/root/.ssh/id_rsa.pub"
+export WEB_PORT="1234"
