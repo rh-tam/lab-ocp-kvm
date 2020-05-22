@@ -3,7 +3,7 @@ set -x
 firewall-cmd --add-source=${HOST_NET}
 firewall-cmd --add-port=${WEB_PORT}/tcp
 
-# firewall-cmd --add-masquerade --zone=public --permanent
+firewall-cmd --add-masquerade --zone=public --permanent
 firewall-cmd --reload
 firewall-cmd --list-all
 
