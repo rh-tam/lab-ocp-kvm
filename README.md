@@ -4,7 +4,7 @@
 
 ### Install Dependencies
 ```
-yum install libvirt-daemon-driver-network libguestfs-tools
+yum install git libvirt-daemon-driver-network libguestfs-tools
 ```
 ### **RHEL 7.6-7.9**
 
@@ -52,7 +52,7 @@ Before going through following procedures, you should make sure you can access y
 ```
 curl http://${HOST_IP}:${WEB_PORT}/install_dir/bootstrap.ign -o -
 ```
-### precedure
+### Precedure
 
 #### Spawn masters and workers
 ```bash
