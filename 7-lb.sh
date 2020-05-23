@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+
 # The image resides on /var/lib/libvirt/images/${CLUSTER_NAME}-lb.qcow2 
 # where you just downloaded
 virt-customize -a /var/lib/libvirt/images/${CLUSTER_NAME}-lb.qcow2 \
@@ -15,4 +15,4 @@ virt-install --import --name ${CLUSTER_NAME}-lb \
   --network network=${VIR_NET} --noreboot --noautoconsole
 
 
-  set +x
+  
