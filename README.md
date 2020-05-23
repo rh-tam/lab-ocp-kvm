@@ -1,50 +1,35 @@
 # lab-ocp-rhv
 
-## prerequisites
+## 0.prerequisites
+
+### Install Dependencies
 ```
 yum install libvirt-daemon-driver-network libguestfs-tools
 ```
-## Generating an SSH private key
+### **RHEL 7.6-7.9**
 
-If you do not have an SSH key that is configured for password-less authentication on your computer, create one. For example, on a computer that uses a Linux operating system, run the following command:
+it's **important** that RHOCP4.2 only support RHEL 7.6-7.9, shown on
+[system requirement of RHEL](https://docs.openshift.com/container-platform/4.2/machine_management/more-rhel-compute.html#rhel-compute-requirements_more-rhel-compute)
+
+### SSH Private Key
+
+If you do not have an SSH key that is configured for password-less authentication on your computer,run the following command:
 
 ```bash
 $ ssh-keygen -t rsa -b 4096 -N '' \
     -f ~/.ssh/id_rsa
 ```
 
-
-
-
-
-## Download Files and Setup Environment
+## 1. Download Files and Setup Environment
 
 ### Download images
 
-
-`https://access.redhat.com/downloads/content/479/ver=/rhel---8/8.2/x86_64/product-software`, there're bugs in RHEL 8.*.
-
 `https://access.redhat.com/downloads/content/69/ver=/rhel---7/7.8/x86_64/product-software`
 
-- screen is deprecated now (Red Hat Enterprise Linux release 8.1 (Ootpa)
 - systemctl disable dnsmasq
--  [DNS CHECK POINT]
+- issue where VMs cannot contact the hypervisor or to external networks
+`fixed by firewalld masquerade`.
 
-- VMs contact the hypervisor or to external networks
-`fixed by firewalld masquerade`. This step is **vital**.
-
-```bash
-firewall-cmd --add-masquerade --zone=public --permanent
-firewall-cmd --reload
-firewall-cmd --list-all
-
-# If using firewalld
-firewall-cmd --add-source=${HOST_NET}
-firewall-cmd --add-port=${WEB_PORT}/tcp
-
-# If using iptables
-iptables -I INPUT -p tcp -m tcp --dport ${WEB_PORT} -s ${HOST_NET} -j ACCEPT
-```
 
 - Generate the ignition files
 
@@ -69,43 +54,8 @@ curl http://${HOST_IP}:${WEB_PORT}/install_dir/bootstrap.ign -o -
 ```
 ### precedure
 
-- spawn **bootstrap node**
-
 ```bash
-virt-install --name ${CLUSTER_NAME}-bootstrap \
-  --disk size=50 --ram 16000 --cpu host --vcpus 4 \
-  --os-type linux --os-variant rhel7.0 \
-  --network network=${VIR_NET} --noreboot --noautoconsole \
-  --location rhcos-install/ \
-  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${HOST_IP}:${WEB_PORT}/rhcos-4.2.0-x86_64-metal-bios.raw.gz coreos.inst.ignition_url=http://${HOST_IP}:${WEB_PORT}/install_dir/bootstrap.ign"
-```
-
-- spawn **3 master nodes**
-
-```bash
-for i in {1..3}
-do
-virt-install --name ${CLUSTER_NAME}-master-${i} \
---disk size=50 --ram 16000 --cpu host --vcpus 4 \
---os-type linux --os-variant rhel7.0 \
---network network=${VIR_NET} --noreboot --noautoconsole \
---location rhcos-install/ \
---extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${HOST_IP}:${WEB_PORT}/rhcos-4.2.0-x86_64-metal-bios.raw.gz coreos.inst.ignition_url=http://${HOST_IP}:${WEB_PORT}/install_dir/master.ign"
-done
-```
-
-- spawn **2 worker nodes**
-
-```bash
-for i in {1..2}
-do
-  virt-install --name ${CLUSTER_NAME}-worker-${i} \
-  --disk size=50 --ram 8192 --cpu host --vcpus 4 \
-  --os-type linux --os-variant rhel7.0 \
-  --network network=${VIR_NET} --noreboot --noautoconsole \
-  --location rhcos-install/ \
-  --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${HOST_IP}:${WEB_PORT}/rhcos-4.2.0-x86_64-metal-bios.raw.gz coreos.inst.ignition_url=http://${HOST_IP}:${WEB_PORT}/install_dir/worker.ign"
-done
+# bash ~/lab-ocp-hrv/5-spawn.sh
 ```
 
 - Setup the RHEL guest image for the load balancer
@@ -149,6 +99,10 @@ watch "virsh list --all | grep '${CLUSTER_NAME}-'"
 - tell dnsmasq to treat our cluster domain
 ```bash
 echo "local=/${CLUSTER_NAME}.${BASE_DOM}/" > ${DNS_DIR}/${CLUSTER_NAME}.conf
+```
+
+```bash
+systemctl reload NetworkManager
 ```
 
 - light on all the VMs.
@@ -226,6 +180,7 @@ ssh-keygen -R $LBIP
 ssh -o StrictHostKeyChecking=no lb.${CLUSTER_NAME}.${BASE_DOM} true
 ```
 
+- RHEL 7
 ```bash
 ssh lb.${CLUSTER_NAME}.${BASE_DOM} <<EOF
 
@@ -287,6 +242,85 @@ backend ingress-http
 
 # 443 points to worker nodes
 frontend ${CLUSTER_NAME}-https *:443
+  default_backend infra-https
+backend infra-https
+  balance source
+  server worker-1 worker-1.${CLUSTER_NAME}.${BASE_DOM}:443 check
+  server worker-2 worker-2.${CLUSTER_NAME}.${BASE_DOM}:443 check
+' > /etc/haproxy/haproxy.cfg
+
+systemctl start haproxy
+systemctl enable haproxy
+EOF
+```
+
+RHEL 8; notice that, OCP4.2 installation is not allowed on RHEL 8
+
+```
+ssh lb.${CLUSTER_NAME}.${BASE_DOM} <<EOF
+
+# Allow haproxy to listen on custom ports
+semanage port -a -t http_port_t -p tcp 6443
+semanage port -a -t http_port_t -p tcp 22623
+
+echo '
+global
+  log 127.0.0.1 local2
+  chroot /var/lib/haproxy
+  pidfile /var/run/haproxy.pid
+  maxconn 4000
+  user haproxy
+  group haproxy
+  daemon
+  stats socket /var/lib/haproxy/stats
+
+defaults
+  mode tcp
+  log global
+  option tcplog
+  option dontlognull
+  option redispatch
+  retries 3
+  timeout queue 1m
+  timeout connect 10s
+  timeout client 1m
+  timeout server 1m
+  timeout check 10s
+  maxconn 3000
+# 6443 points to control plan
+frontend ${CLUSTER_NAME}-api 
+  bind *:6443
+  default_backend master-api
+backend master-api
+  balance source
+  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:6443 check
+  server master-1 master-1.${CLUSTER_NAME}.${BASE_DOM}:6443 check
+  server master-2 master-2.${CLUSTER_NAME}.${BASE_DOM}:6443 check
+  server master-3 master-3.${CLUSTER_NAME}.${BASE_DOM}:6443 check
+
+# 22623 points to control plane
+frontend ${CLUSTER_NAME}-mapi 
+  bind *:22623
+  default_backend master-mapi
+backend master-mapi
+  balance source
+  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:22623 check
+  server master-1 master-1.${CLUSTER_NAME}.${BASE_DOM}:22623 check
+  server master-2 master-2.${CLUSTER_NAME}.${BASE_DOM}:22623 check
+  server master-3 master-3.${CLUSTER_NAME}.${BASE_DOM}:22623 check
+
+# 80 points to worker nodes
+frontend ${CLUSTER_NAME}-http 
+  bind *:80
+  default_backend ingress-http
+backend ingress-http
+  balance source
+  server worker-1 worker-1.${CLUSTER_NAME}.${BASE_DOM}:80 check
+  server worker-2 worker-2.${CLUSTER_NAME}.${BASE_DOM}:80 check
+
+# 443 points to worker nodes
+frontend ${CLUSTER_NAME}-https 
+  bind *:443
   default_backend infra-https
 backend infra-https
   balance source

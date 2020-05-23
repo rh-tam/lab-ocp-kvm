@@ -1,4 +1,3 @@
-#!/bin/bash
 export NET_OCT="111"
 export VIR_NET="default"
 
