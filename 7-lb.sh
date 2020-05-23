@@ -9,10 +9,11 @@ virt-customize -a /var/lib/libvirt/images/${CLUSTER_NAME}-lb.qcow2 \
   --sm-credentials "${RHNUSER}:password:${RHNPASS}" \
   --sm-register --sm-attach auto --install haproxy
 
+set -x
 # spawn load balancer
 virt-install --import --name ${CLUSTER_NAME}-lb \
   --disk /var/lib/libvirt/images/${CLUSTER_NAME}-lb.qcow2 --memory 1024 --cpu host --vcpus 1 \
   --network network=${VIR_NET} --noreboot --noautoconsole
 
-
+set +x
   
