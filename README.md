@@ -45,7 +45,7 @@ This step is **critical**. you MUST go `ocp4` then start the web server otherwis
 python3 -m http.server ${WEB_PORT}
 ```
 
-## Create the Red Hat CoreOS and Load Balancer VMs
+## 2. Create the Red Hat CoreOS and Load Balancer VMs
 
 Before going through following procedures, you should make sure you can access your ignition, ing, and image, img, files.
 
@@ -54,28 +54,15 @@ curl http://${HOST_IP}:${WEB_PORT}/install_dir/bootstrap.ign -o -
 ```
 ### precedure
 
+#### Spawn masters and workers
 ```bash
 # bash ~/lab-ocp-hrv/5-spawn.sh
 ```
 
-- Setup the RHEL guest image for the load balancer
+#### Setup the RHEL guest image for the load balancer
 
 The image resides on `/var/lib/libvirt/images/${CLUSTER_NAME}-lb.qcow2` where you just downloaded
 
-```bash
-virt-customize -a /var/lib/libvirt/images/${CLUSTER_NAME}-lb.qcow2 \
-  --uninstall cloud-init \
-  --ssh-inject root:file:$SSH_KEY --selinux-relabel \
-  --sm-credentials "${RHNUSER}:password:${RHNPASS}" \
-  --sm-register --sm-attach auto --install haproxy
-```
-
-- spawn load balancer
-```bash
-virt-install --import --name ${CLUSTER_NAME}-lb \
-  --disk /var/lib/libvirt/images/${CLUSTER_NAME}-lb.qcow2 --memory 1024 --cpu host --vcpus 1 \
-  --network network=${VIR_NET} --noreboot --noautoconsole
-```
 
 ### Check
 we adopt virt-install creating 7 VMs
@@ -95,7 +82,8 @@ watch "virsh list --all | grep '${CLUSTER_NAME}-'"
 
 ![image](https://user-images.githubusercontent.com/10542832/82338472-8557aa00-9a1f-11ea-87c1-dd2619538a2d.png)
 
-## Setup DNS and Load Balancing
+
+## 3. Setup DNS and Load Balancing
 - tell dnsmasq to treat our cluster domain
 ```bash
 echo "local=/${CLUSTER_NAME}.${BASE_DOM}/" > ${DNS_DIR}/${CLUSTER_NAME}.conf
@@ -341,6 +329,7 @@ ssh lb.${CLUSTER_NAME}.${BASE_DOM} netstat -nltupe | grep ':6443\|:22623\|:80\|:
 ![image](https://user-images.githubusercontent.com/64194459/82631733-ccfd5200-9c28-11ea-8fcc-639a72de3ff2.png)
 
 
+## x. Clean Up
 ```bash
 for n in ocp42-lb ocp42-master-1 ocp42-master-2 ocp42-master-3 ocp42-worker-1 ocp42-worker-2 ocp42-bootstrap; do virsh shutdown $n; virsh shutdown --domain $n; virsh destroy $n; virsh destroy --domain $n; virsh undefine $n; virsh undefine --domain $n; done
 ```
