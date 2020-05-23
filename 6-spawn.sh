@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -x
 # bootstrap node
 virt-install --name ${CLUSTER_NAME}-bootstrap \
   --disk size=50 --ram 16000 --cpu host --vcpus 4 \
@@ -30,4 +31,5 @@ do
   --extra-args "nomodeset rd.neednet=1 coreos.inst=yes coreos.inst.install_dev=vda coreos.inst.image_url=http://${HOST_IP}:${WEB_PORT}/rhcos-4.2.0-x86_64-metal-bios.raw.gz coreos.inst.ignition_url=http://${HOST_IP}:${WEB_PORT}/install_dir/worker.ign"
 done
 
+set +x
 

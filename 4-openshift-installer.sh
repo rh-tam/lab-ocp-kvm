@@ -1,4 +1,5 @@
 #!/bin/bash
+set -x
 cd ~/ocp4
 mkdir install_dir
 
@@ -30,3 +31,5 @@ EOF
 
 # Generate the ignition files
 ./openshift-install create ignition-configs --dir=./install_dir
+
+set +x
