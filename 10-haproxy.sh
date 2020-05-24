@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -x
 ssh-keygen -R lb.${CLUSTER_NAME}.${BASE_DOM}
 ssh-keygen -R $LBIP
 ssh -o StrictHostKeyChecking=no lb.${CLUSTER_NAME}.${BASE_DOM} true
@@ -74,3 +75,5 @@ backend infra-https
 systemctl start haproxy
 systemctl enable haproxy
 EOF
+
+set +x

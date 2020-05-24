@@ -72,6 +72,10 @@ we adopt virt-install creating 7 VMs
 - 2 worker
 - load balancer
 
+you can observe that your web server start to be pulled images from distinct VMs
+
+![image](https://user-images.githubusercontent.com/64194459/82748258-15f10a00-9dd3-11ea-817b-1188045f61ea.png)
+
 `Virt-install` should make all VMs `power-off` once it successfully finishes, and `Power-off` status appear very soon if your web-server configuration is correct. 
 
 Note that you should go `ocp4` directory before starting web-server.
