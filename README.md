@@ -4,7 +4,7 @@
 
 ### Install Dependencies
 ```
-yum install git python3 libvirt-daemon-driver-network libguestfs-tools
+yum install git python3 libvirt-daemon-driver-network libguestfs-tools screen
 ```
 ### **RHEL 7.6-7.9**
 
@@ -15,15 +15,27 @@ it's **important** that RHOCP4.2 only support RHEL 7.6-7.9, shown on
 
 If you do not have an SSH key that is configured for password-less authentication on your computer,run the following command:
 
+`ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa`
+
+the ssh key would be used on the following. Also in the shell script you will download, it also comprises this step. So **skip** to next.
+
+## 1. Installation
+
+### Shell Script
+
+- download shell script
 ```bash
-$ ssh-keygen -t rsa -b 4096 -N '' \
-    -f ~/.ssh/id_rsa
+cd ~/
+git clone https://github.com/rh-tam/lab-ocp-rhv.git
+```
+
+- export env
+```
+source ~/lab-ocp-rhv/0-env
 ```
 
 ## 1. Download Files and Setup Environment
-
 ### Download images
-
 `https://access.redhat.com/downloads/content/69/ver=/rhel---7/7.8/x86_64/product-software`
 
 - systemctl disable dnsmasq
@@ -55,6 +67,7 @@ curl http://${HOST_IP}:${WEB_PORT}/install_dir/bootstrap.ign -o -
 ### Precedure
 
 #### Spawn masters and workers
+
 ```bash
 # bash ~/lab-ocp-hrv/5-spawn.sh
 ```
@@ -353,9 +366,28 @@ INFO Waiting up to 30m0s for bootstrapping to complete...
 INFO It is now safe to remove the bootstrap resources 
 ```
 
+### Ready to access your openshift cluster
+```bash
+export KUBECONFIG=install_dir/auth/kubeconfig
+```
+
+### Remove your bootstrap
+until your all nodes are ready, you can remove out the bootstrap
+![image](https://user-images.githubusercontent.com/64194459/82755234-f07cf400-9e04-11ea-9062-5bf71193c796.png)
+
+
+```bash
+bash ~/lab-ocp-rhv/13-remove-haproxy.sh
+```
+
+you can also quit the http.server 
+```
+screen -S ${CLUSTER_NAME} -X quit
+```
+
 ## x. Clean Up
 ```bash
-for n in ocp42-lb ocp42-master-1 ocp42-master-2 ocp42-master-3 ocp42-worker-1 ocp42-worker-2 ocp42-bootstrap; do virsh shutdown $n; virsh shutdown --domain $n; virsh destroy $n; virsh destroy --domain $n; virsh undefine $n; virsh undefine --domain $n; done
+for n in ocp42-lb ocp42-master-1 ocp42-master-2 ocp42-master-3 ocp42-worker-1 ocp42-worker-2 ocp42-bootstrap; do virsh shutdown $n; virsh destroy $n; virsh undefine $n --remove-all-storage; done
 ```
 
 ```bash
