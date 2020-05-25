@@ -21,7 +21,7 @@ The ssh key would be used on the following. Meanwhile you will download shellscr
 
 - use either NetworkManager or Dnsmasq
 
-This guide prefer to `NetworkManager`, so try to disable dnsmasq
+This guide prefers to `NetworkManager`, so try to disable dnsmasq
 ```
 systemctl disable dnsmasq
 ```
@@ -48,7 +48,7 @@ Here, we adopt UPI, `user-provisioned infrastructure` in ths guide.
 
 https://cloud.redhat.com/openshift/install/metal/user-provisioned
 
-- Download images
+- Download RHEL guest images
 
 `https://access.redhat.com/downloads/content/69/ver=/rhel---7/7.8/x86_64/product-software`
 
@@ -73,12 +73,16 @@ also, you can create new terminal session, but remember that you should reclaim 
 ```bash
 python3 -m http.server ${WEB_PORT}
 ```
-## 3 Setup DNS
+## 3. Setup DNS
 
 - execute setup and check DNS
 ```
 bash ~/lab-ocp-rhv/1-setup-n-check-dns.sh
 ```
+
+- **[check]**
+
+Check DNS and Srv work properly
 
 ## 4. Download UPI
 - source pull-secret-rhnuser
@@ -97,13 +101,72 @@ to copy your pull_secret
 
 ![image](https://user-images.githubusercontent.com/64194459/82781434-60828d00-9e8c-11ea-9331-718fc26919fe.png)
 
-## 2. Create the Red Hat CoreOS and Load Balancer VMs
+## 5. Rhcos prepare
 
-Before going through following procedures, you should make sure you can access your ignition, ing, and image, img, files.
+- RHCOS bios image
+
+the download process is in `3-rhcos-prepare.sh`
+
+- RHEL guest image for KVM
+go visiting
+`https://access.redhat.com/downloads/content/69/ver=/rhel---7/7.8/x86_64/product-software`
+
+and copy the link
+![image](https://user-images.githubusercontent.com/64194459/82782161-3e8a0a00-9e8e-11ea-880c-f8689c1fc0f7.png)
+
+the `3=rhcos-prepare.sh` will ask for the url
+
+- kernel and initramfs and generate the treeinfo
+
+let's go executing `3-rhcos-prepare.sh`
+
+```
+bash ~/lab-ocp-rhv/3-rhcos-prepare.sh
+```
+
+it will take a while depending on your internet bandwidth.
+
+## 6. Prepare Installion Directory for OpenShift Installer
+- create directory and `install-config.yaml`
+
+you can modify the parameters of `install-config.yaml` in `4-openshift-installer.sh`, then go executing
+
+```bash
+bash ~/lab-ocp-rhv/4-openshift-installer.sh
+```
+
+it will create `ignition files` as well
+
+## 7. Served Web Server for Ignition and Images
+ 
+- served Web Server
+
+```
+screen -S ${CLUSTER_NAME} -dm bash -c "python3 -m http.server ${WEB_PORT}"
+```
+
+or create other terminal session, then `source 0-env again`.
+Also remember go `ocp4` directory
+
+- check served web server
+
+make sure that our current directory `ocp4` is being served by python. Also make sure that you can access the ignition (ing) and image (img) files. 
+
+- **[check]**
+make sure ing and img served properly
 
 ```
 curl http://${HOST_IP}:${WEB_PORT}/install_dir/bootstrap.ign -o -
 ```
+
+Also double check the URLs we are going to **pass to the RHCOS installer kernel in the next commands**. Make sure that those URLs are reachable from inside the VMs.
+
+
+## 2. Create the Red Hat CoreOS and Load Balancer VMs
+
+Before going through following procedures, you should make sure you can access your ignition, ing, and image, img, files.
+
+
 ### Precedure
 
 #### Spawn masters and workers
