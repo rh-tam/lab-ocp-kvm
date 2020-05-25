@@ -197,7 +197,35 @@ bash ~/lab-ocp-rhv/8-start-vm.sh
 
 - add DHCP reservation
 ```bash
-bash ~/lab-ocp-rhv/9-dhcp.sh
+source ~/lab-ocp-rhv/9-dhcp
+```
+
+
+![image](https://user-images.githubusercontent.com/10542832/82340384-bdf88300-9a21-11ea-8f69-8dcebfcc5e3c.png)
+
+- configure load balancing (haproxy)
+```bash
+bash ~/lab-ocp-rhv/10-haproxy.sh
+```
+
+- **[check]**
+make sure haproxy is configured properly
+
+```bash
+bash ~/lab-ocp-rhv/11-check-haproxy.sh
+```
+
+![image](https://user-images.githubusercontent.com/64194459/82631733-ccfd5200-9c28-11ea-8fcc-639a72de3ff2.png)
+
+## 11. BootStrap OpenShift 4
+
+- start OpenShift installation (UPI)
+```bash
+bash ~/lab-ocp-rhv/12-bootstrap.sh
+```
+- **[check]**
+```bash
+ssh core@<bootstrap-node> journalctl -b -f -u bootkube.service
 ```
 
 ### Precedure
@@ -288,7 +316,6 @@ do
 done
 ```
 
-![image](https://user-images.githubusercontent.com/10542832/82340384-bdf88300-9a21-11ea-8f69-8dcebfcc5e3c.png)
 
 - Find the IP and MAC address of the load balancer VM. Add DHCP reservation
 ```bash
@@ -479,8 +506,6 @@ ssh lb.${CLUSTER_NAME}.${BASE_DOM} systemctl status haproxy
 ssh lb.${CLUSTER_NAME}.${BASE_DOM} netstat -nltupe | grep ':6443\|:22623\|:80\|:443'
 ```
  
-![image](https://user-images.githubusercontent.com/64194459/82631733-ccfd5200-9c28-11ea-8fcc-639a72de3ff2.png)
-
 
 ## BootStrap OpenShift 4
 
