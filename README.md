@@ -188,6 +188,19 @@ bash ~/lab-ocp-rhv/7-lb.sh
 watch "virsh list --all | grep '${CLUSTER_NAME}-'"
 ```
 
+we adopt virt-install creating 7 VMs in default, if you don't change `install-config.yaml` and related shell script
+
+  - 1 x bootstrap
+  - 3 x master
+  - 2 x worker
+  - 1 x load balancer
+
+you can observe that your web server start to be pulled images from distinct VMs
+
+![image](https://user-images.githubusercontent.com/64194459/82748258-15f10a00-9dd3-11ea-817b-1188045f61ea.png)
+
+Note that `Virt-install` should make all VMs `power-off` once it successfully finishes, and `Power-off` status appear very soon if your web-server configuration is correct. 
+
 ## 10. Setup DNS and Load balancing
 
 - config dnsmasq and start all VMs
@@ -227,326 +240,89 @@ bash ~/lab-ocp-rhv/12-bootstrap.sh
 ```bash
 ssh core@<bootstrap-node> journalctl -b -f -u bootkube.service
 ```
+it will take a very long time to execute on this process. Please be patient.
 
-### Precedure
+After a while, you will see the following.
+![image](https://user-images.githubusercontent.com/64194459/82792160-88302000-9ea1-11ea-91ea-b7b5d456db71.png)
 
-#### Spawn masters and workers
+## 11. Login OpenShift Cluster
 
-```bash
-# bash ~/lab-ocp-hrv/5-spawn.sh
-```
+- login with `kubeconfig`
 
-#### Setup the RHEL guest image for the load balancer
-
-The image resides on `/var/lib/libvirt/images/${CLUSTER_NAME}-lb.qcow2` where you just downloaded
-
-
-### Check
-we adopt virt-install creating 7 VMs
-
-- bootstrap
-- 3 master
-- 2 worker
-- load balancer
-
-you can observe that your web server start to be pulled images from distinct VMs
-
-![image](https://user-images.githubusercontent.com/64194459/82748258-15f10a00-9dd3-11ea-817b-1188045f61ea.png)
-
-`Virt-install` should make all VMs `power-off` once it successfully finishes, and `Power-off` status appear very soon if your web-server configuration is correct. 
-
-Note that you should go `ocp4` directory before starting web-server.
-
-```bash
-watch "virsh list --all | grep '${CLUSTER_NAME}-'"
-```
-
-![image](https://user-images.githubusercontent.com/10542832/82338472-8557aa00-9a1f-11ea-87c1-dd2619538a2d.png)
-
-
-## 3. Setup DNS and Load Balancing
-- tell dnsmasq to treat our cluster domain
-```bash
-echo "local=/${CLUSTER_NAME}.${BASE_DOM}/" > ${DNS_DIR}/${CLUSTER_NAME}.conf
-```
-
-```bash
-systemctl reload NetworkManager
-```
-
-- light on all the VMs.
-```bash
-for x in lb bootstrap master-1 master-2 master-3 worker-1 worker-2
-do
-  virsh start ${CLUSTER_NAME}-$x
-done
-```
-
-```bash
-IP=$(virsh domifaddr "${CLUSTER_NAME}-bootstrap" | grep ipv4 | head -n1 | awk '{print $4}' | cut -d'/' -f1)
-MAC=$(virsh domifaddr "${CLUSTER_NAME}-bootstrap" | grep ipv4 | head -n1 | awk '{print $2}')
-virsh net-update ${VIR_NET} add-last ip-dhcp-host --xml "<host mac='$MAC' ip='$IP'/>" --live --config
-echo "$IP bootstrap.${CLUSTER_NAME}.${BASE_DOM}" >> /etc/hosts
-```
-![image](https://user-images.githubusercontent.com/10542832/82339803-095e6180-9a21-11ea-9c97-f2160e1d8b7c.png)
-
-- Find the IP and MAC address of the master VMs. Add DHCP reservation
-```bash
-for i in {1..3}
-do
-  IP=$(virsh domifaddr "${CLUSTER_NAME}-master-${i}" | grep ipv4 | head -n1 | awk '{print $4}' | cut -d'/' -f1)
-  MAC=$(virsh domifaddr "${CLUSTER_NAME}-master-${i}" | grep ipv4 | head -n1 | awk '{print $2}')
-  virsh net-update ${VIR_NET} add-last ip-dhcp-host --xml "<host mac='$MAC' ip='$IP'/>" --live --config
-  echo "$IP master-${i}.${CLUSTER_NAME}.${BASE_DOM}" \
-  "etcd-$((i-1)).${CLUSTER_NAME}.${BASE_DOM}" >> /etc/hosts
-  echo "srv-host=_etcd-server-ssl._tcp.${CLUSTER_NAME}.${BASE_DOM},etcd-$((i-1)).${CLUSTER_NAME}.${BASE_DOM},2380,0,10" >> ${DNS_DIR}/${CLUSTER_NAME}.conf
-done
-```
-
-![image](https://user-images.githubusercontent.com/10542832/82340205-88ec3080-9a21-11ea-85b7-fc0ec1765d92.png)
-
-- Find the IP and MAC address of the worker VMs. Add DHCP reservation
-```bash
-for i in {1..2}
-do
-   IP=$(virsh domifaddr "${CLUSTER_NAME}-worker-${i}" | grep ipv4 | head -n1 | awk '{print $4}' | cut -d'/' -f1)
-   MAC=$(virsh domifaddr "${CLUSTER_NAME}-worker-${i}" | grep ipv4 | head -n1 | awk '{print $2}')
-   virsh net-update ${VIR_NET} add-last ip-dhcp-host --xml "<host mac='$MAC' ip='$IP'/>" --live --config
-   echo "$IP worker-${i}.${CLUSTER_NAME}.${BASE_DOM}" >> /etc/hosts
-done
-```
-
-
-- Find the IP and MAC address of the load balancer VM. Add DHCP reservation
-```bash
-LBIP=$(virsh domifaddr "${CLUSTER_NAME}-lb" | grep ipv4 | head -n1 | awk '{print $4}' | cut -d'/' -f1)
-MAC=$(virsh domifaddr "${CLUSTER_NAME}-lb" | grep ipv4 | head -n1 | awk '{print $2}')
-virsh net-update ${VIR_NET} add-last ip-dhcp-host --xml "<host mac='$MAC' ip='$LBIP'/>" --live --config
-echo "$LBIP lb.${CLUSTER_NAME}.${BASE_DOM}" \
-"api.${CLUSTER_NAME}.${BASE_DOM}" \
-"api-int.${CLUSTER_NAME}.${BASE_DOM}" >> /etc/hosts
-```
-
-- wild-card DNS and point it to the load balancer
-``` bash
-echo "address=/apps.${CLUSTER_NAME}.${BASE_DOM}/${LBIP}" >> ${DNS_DIR}/${CLUSTER_NAME}.conf
-```
-
-
-- reload NetworkManager and Libvirt for DNS entires
-**make sure that this procedure is done before go configuring Haproxy**
-
-```bash
-systemctl reload NetworkManager
-systemctl restart libvirtd
-```
-
-- configure Haproxy
-```bash
-ssh-keygen -R lb.${CLUSTER_NAME}.${BASE_DOM}
-ssh-keygen -R $LBIP
-ssh -o StrictHostKeyChecking=no lb.${CLUSTER_NAME}.${BASE_DOM} true
-```
-
-- RHEL 7
-```bash
-ssh lb.${CLUSTER_NAME}.${BASE_DOM} <<EOF
-
-# Allow haproxy to listen on custom ports
-semanage port -a -t http_port_t -p tcp 6443
-semanage port -a -t http_port_t -p tcp 22623
-
-echo '
-global
-  log 127.0.0.1 local2
-  chroot /var/lib/haproxy
-  pidfile /var/run/haproxy.pid
-  maxconn 4000
-  user haproxy
-  group haproxy
-  daemon
-  stats socket /var/lib/haproxy/stats
-
-defaults
-  mode tcp
-  log global
-  option tcplog
-  option dontlognull
-  option redispatch
-  retries 3
-  timeout queue 1m
-  timeout connect 10s
-  timeout client 1m
-  timeout server 1m
-  timeout check 10s
-  maxconn 3000
-# 6443 points to control plan
-frontend ${CLUSTER_NAME}-api *:6443
-  default_backend master-api
-backend master-api
-  balance source
-  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:6443 check
-  server master-1 master-1.${CLUSTER_NAME}.${BASE_DOM}:6443 check
-  server master-2 master-2.${CLUSTER_NAME}.${BASE_DOM}:6443 check
-  server master-3 master-3.${CLUSTER_NAME}.${BASE_DOM}:6443 check
-
-# 22623 points to control plane
-frontend ${CLUSTER_NAME}-mapi *:22623
-  default_backend master-mapi
-backend master-mapi
-  balance source
-  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:22623 check
-  server master-1 master-1.${CLUSTER_NAME}.${BASE_DOM}:22623 check
-  server master-2 master-2.${CLUSTER_NAME}.${BASE_DOM}:22623 check
-  server master-3 master-3.${CLUSTER_NAME}.${BASE_DOM}:22623 check
-
-# 80 points to worker nodes
-frontend ${CLUSTER_NAME}-http *:80
-  default_backend ingress-http
-backend ingress-http
-  balance source
-  server worker-1 worker-1.${CLUSTER_NAME}.${BASE_DOM}:80 check
-  server worker-2 worker-2.${CLUSTER_NAME}.${BASE_DOM}:80 check
-
-# 443 points to worker nodes
-frontend ${CLUSTER_NAME}-https *:443
-  default_backend infra-https
-backend infra-https
-  balance source
-  server worker-1 worker-1.${CLUSTER_NAME}.${BASE_DOM}:443 check
-  server worker-2 worker-2.${CLUSTER_NAME}.${BASE_DOM}:443 check
-' > /etc/haproxy/haproxy.cfg
-
-systemctl start haproxy
-systemctl enable haproxy
-EOF
-```
-
-RHEL 8; notice that, OCP4.2 installation is not allowed on RHEL 8
-
-```
-ssh lb.${CLUSTER_NAME}.${BASE_DOM} <<EOF
-
-# Allow haproxy to listen on custom ports
-semanage port -a -t http_port_t -p tcp 6443
-semanage port -a -t http_port_t -p tcp 22623
-
-echo '
-global
-  log 127.0.0.1 local2
-  chroot /var/lib/haproxy
-  pidfile /var/run/haproxy.pid
-  maxconn 4000
-  user haproxy
-  group haproxy
-  daemon
-  stats socket /var/lib/haproxy/stats
-
-defaults
-  mode tcp
-  log global
-  option tcplog
-  option dontlognull
-  option redispatch
-  retries 3
-  timeout queue 1m
-  timeout connect 10s
-  timeout client 1m
-  timeout server 1m
-  timeout check 10s
-  maxconn 3000
-# 6443 points to control plan
-frontend ${CLUSTER_NAME}-api 
-  bind *:6443
-  default_backend master-api
-backend master-api
-  balance source
-  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:6443 check
-  server master-1 master-1.${CLUSTER_NAME}.${BASE_DOM}:6443 check
-  server master-2 master-2.${CLUSTER_NAME}.${BASE_DOM}:6443 check
-  server master-3 master-3.${CLUSTER_NAME}.${BASE_DOM}:6443 check
-
-# 22623 points to control plane
-frontend ${CLUSTER_NAME}-mapi 
-  bind *:22623
-  default_backend master-mapi
-backend master-mapi
-  balance source
-  server bootstrap bootstrap.${CLUSTER_NAME}.${BASE_DOM}:22623 check
-  server master-1 master-1.${CLUSTER_NAME}.${BASE_DOM}:22623 check
-  server master-2 master-2.${CLUSTER_NAME}.${BASE_DOM}:22623 check
-  server master-3 master-3.${CLUSTER_NAME}.${BASE_DOM}:22623 check
-
-# 80 points to worker nodes
-frontend ${CLUSTER_NAME}-http 
-  bind *:80
-  default_backend ingress-http
-backend ingress-http
-  balance source
-  server worker-1 worker-1.${CLUSTER_NAME}.${BASE_DOM}:80 check
-  server worker-2 worker-2.${CLUSTER_NAME}.${BASE_DOM}:80 check
-
-# 443 points to worker nodes
-frontend ${CLUSTER_NAME}-https 
-  bind *:443
-  default_backend infra-https
-backend infra-https
-  balance source
-  server worker-1 worker-1.${CLUSTER_NAME}.${BASE_DOM}:443 check
-  server worker-2 worker-2.${CLUSTER_NAME}.${BASE_DOM}:443 check
-' > /etc/haproxy/haproxy.cfg
-
-systemctl start haproxy
-systemctl enable haproxy
-EOF
-```
-- check & success
-```bash
-ssh lb.${CLUSTER_NAME}.${BASE_DOM} systemctl status haproxy
-ssh lb.${CLUSTER_NAME}.${BASE_DOM} netstat -nltupe | grep ':6443\|:22623\|:80\|:443'
-```
- 
-
-## BootStrap OpenShift 4
-
-```bash
-bash ~/lab-ocp-rhv/12-bootstrap.sh
-```
-
-you can check bootkube.server by
-```bash
-ssh core@<bootstrap-node> journalctl -b -f -u bootkube.service
-```
-![image](https://user-images.githubusercontent.com/64194459/82755110-253c7b80-9e04-11ea-9208-89a2d48e98a8.png)
-
-After seeing those messages:
-```
-INFO Waiting up to 30m0s for the Kubernetes API at https://api.ocp42.local:6443... 
-INFO API v1.14.6+2e5ed54 up                       
-INFO Waiting up to 30m0s for bootstrapping to complete... 
-INFO It is now safe to remove the bootstrap resources 
-```
-
-### Ready to access your openshift cluster
 ```bash
 export KUBECONFIG=install_dir/auth/kubeconfig
 ```
 
-### Remove your bootstrap
-until your all nodes are ready, you can remove out the bootstrap
-![image](https://user-images.githubusercontent.com/64194459/82755234-f07cf400-9e04-11ea-9062-5bf71193c796.png)
-
+- check your nodes' status
 
 ```bash
-bash ~/lab-ocp-rhv/13-remove-haproxy.sh
+./oc get nodes
 ```
+![image](https://user-images.githubusercontent.com/64194459/82792396-eceb7a80-9ea1-11ea-836b-b422135578f3.png)
 
-you can also quit the http.server 
-```
+## 12. Remove Bootstrap
+
+- **teardown** Web Server for Imgs and Igns
+
+```bash
 screen -S ${CLUSTER_NAME} -X quit
 ```
+or `ctrl+c` with `python3 -m http.server ${WEB_PORT}`
 
-## x. Clean Up
+- remove bootstrap
+```bash
+bash ~/lab-ocp-rhv/13-remove-bootstrap.sh
+```
+## 13. Registry Setup
+- emptyDir
+due to no RWX storage here, we will update the setting
+
+```bash
+./oc patch configs.imageregistry.operator.openshift.io cluster --type merge --patch '{"spec":{"storage":{"emptyDir":{}}}}'
+```
+- after registry updates, you have to make sure all operators ready.
+
+```bash
+watch "./oc get clusterversion; echo; ./oc get clusteroperators"
+```
+it might also take a few minutes to get the consequence you desire.
+optionally, `./oc get co` for `./oc get clusteroperators`
+
+- **[check]**
+  - before
+  ![image](https://user-images.githubusercontent.com/64194459/82793683-e6f69900-9ea3-11ea-8623-e309fe256c26.png)
+
+  - after. observe `AVAILABLE` and `PROGRESSING`
+  ![image](https://user-images.githubusercontent.com/64194459/82794185-a77c7c80-9ea4-11ea-8b1a-c121d99be99d.png)
+
+## 13. Finish Installation and Ready to Go
+
+- finish the installation by running
+```bash
+./openshift-install --dir=install_dir wait-for install-complete
+```
+
+![image](https://user-images.githubusercontent.com/64194459/82794747-9122f080-9ea5-11ea-9843-94523dd43218.png)
+
+````
+INFO Waiting up to 30m0s for the cluster at https://api.ocp42.local:6443 to initialize... 
+INFO Waiting up to 10m0s for the openshift-console route to be created... 
+INFO Install complete!                            
+INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/ocp4/install_dir/auth/kubeconfig' 
+INFO Access the OpenShift web-console here: https://console-openshift-console.apps.ocp42.local 
+INFO Login to the console with user: kubeadmin, password: kusMw-jVhjz-qZc3b-IhqbZ 
+````
+you can now login with the above information
+
+or
+
+you can get kubeadmin password
+```bash
+KUBE_PASS=$(cat install_dir/auth/kubeadmin-password)
+./oc login -u kubeadmin -p $KUBE_PASS
+```
+## Appendix
+### x. Clean Up
 ```bash
 for n in ocp42-lb ocp42-master-1 ocp42-master-2 ocp42-master-3 ocp42-worker-1 ocp42-worker-2 ocp42-bootstrap; do virsh shutdown $n; virsh destroy $n; virsh undefine $n --remove-all-storage; done
 ```
@@ -557,4 +333,19 @@ rm -r /var/lib/libvirt/images/*.qcow2
 
 ```bash
 sed -i "/${CLUSTER_NAME}.${BASE_DOM}/d" /etc/hosts
+```
+
+### Debug
+- FATAL waiting for Kubernetes API
+
+try to login into master node
+```bash
+sudo -i
+# and run crictl ps
+crictl logs <container id of discover>
+```
+
+then re-run
+```bash
+bash ~/lab-ocp-rhv/12-bootstrap.sh
 ```
