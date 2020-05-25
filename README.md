@@ -286,13 +286,14 @@ due to no RWX storage here, we will update the setting
 watch "./oc get clusterversion; echo; ./oc get clusteroperators"
 ```
 it might also take a few minutes to get the consequence you desire.
-optionally, `./oc get co` for `./oc get clusteroperators`
+
+Optionally, `./oc get co` can substitute `./oc get clusteroperators`
 
 - **[check]**
-  - before
+  - **BEFORE**
   ![image](https://user-images.githubusercontent.com/64194459/82793683-e6f69900-9ea3-11ea-8623-e309fe256c26.png)
 
-  - after. observe `AVAILABLE` and `PROGRESSING`
+  - **AFTER**; observe `AVAILABLE` and `PROGRESSING`
   ![image](https://user-images.githubusercontent.com/64194459/82794185-a77c7c80-9ea4-11ea-8b1a-c121d99be99d.png)
 
 ## 13. Finish Installation and Ready to Go
@@ -302,7 +303,11 @@ optionally, `./oc get co` for `./oc get clusteroperators`
 ./openshift-install --dir=install_dir wait-for install-complete
 ```
 
+you will get the following info.
+
 ![image](https://user-images.githubusercontent.com/64194459/82794747-9122f080-9ea5-11ea-9843-94523dd43218.png)
+
+It also means you are successful on installation of OCP
 
 ````
 INFO Waiting up to 30m0s for the cluster at https://api.ocp42.local:6443 to initialize... 
@@ -312,17 +317,20 @@ INFO To access the cluster as the system:admin user when using 'oc', run 'export
 INFO Access the OpenShift web-console here: https://console-openshift-console.apps.ocp42.local 
 INFO Login to the console with user: kubeadmin, password: kusMw-jVhjz-qZc3b-IhqbZ 
 ````
+
+- login passwd
 you can now login with the above information
 
 or
 
-you can get kubeadmin password
+you can get kubeadmin password by:
+
 ```bash
 KUBE_PASS=$(cat install_dir/auth/kubeadmin-password)
 ./oc login -u kubeadmin -p $KUBE_PASS
 ```
 ## Appendix
-### x. Clean Up
+### I. Clean Up
 ```bash
 for n in ocp42-lb ocp42-master-1 ocp42-master-2 ocp42-master-3 ocp42-worker-1 ocp42-worker-2 ocp42-bootstrap; do virsh shutdown $n; virsh destroy $n; virsh undefine $n --remove-all-storage; done
 ```
@@ -335,7 +343,7 @@ rm -r /var/lib/libvirt/images/*.qcow2
 sed -i "/${CLUSTER_NAME}.${BASE_DOM}/d" /etc/hosts
 ```
 
-### Debug
+### II. Debug
 - FATAL waiting for Kubernetes API
 
 try to login into master node
