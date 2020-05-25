@@ -333,6 +333,26 @@ ssh lb.${CLUSTER_NAME}.${BASE_DOM} netstat -nltupe | grep ':6443\|:22623\|:80\|:
 ![image](https://user-images.githubusercontent.com/64194459/82631733-ccfd5200-9c28-11ea-8fcc-639a72de3ff2.png)
 
 
+## BootStrap OpenShift 4
+
+```bash
+bash ~/lab-ocp-rhv/12-bootstrap.sh
+```
+
+you can check bootkube.server by
+```bash
+ssh core@<bootstrap-node> journalctl -b -f -u bootkube.service
+```
+![image](https://user-images.githubusercontent.com/64194459/82755110-253c7b80-9e04-11ea-9208-89a2d48e98a8.png)
+
+After seeing those messages:
+```
+INFO Waiting up to 30m0s for the Kubernetes API at https://api.ocp42.local:6443... 
+INFO API v1.14.6+2e5ed54 up                       
+INFO Waiting up to 30m0s for bootstrapping to complete... 
+INFO It is now safe to remove the bootstrap resources 
+```
+
 ## x. Clean Up
 ```bash
 for n in ocp42-lb ocp42-master-1 ocp42-master-2 ocp42-master-3 ocp42-worker-1 ocp42-worker-2 ocp42-bootstrap; do virsh shutdown $n; virsh shutdown --domain $n; virsh destroy $n; virsh destroy --domain $n; virsh undefine $n; virsh undefine --domain $n; done
