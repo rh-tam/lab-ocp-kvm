@@ -114,7 +114,7 @@ go visiting
 and copy the link
 ![image](https://user-images.githubusercontent.com/64194459/82782161-3e8a0a00-9e8e-11ea-880c-f8689c1fc0f7.png)
 
-the `3=rhcos-prepare.sh` will ask for the url
+the `3-rhcos-prepare.sh` will ask for the url
 
 - kernel and initramfs and generate the treeinfo
 
@@ -124,7 +124,7 @@ let's go executing `3-rhcos-prepare.sh`
 bash ~/lab-ocp-rhv/3-rhcos-prepare.sh
 ```
 
-it will take a while depending on your internet bandwidth.
+it will **take a while**, around 1 hr depending on your internet bandwidth.
 
 ## 6. Prepare Installion Directory for OpenShift Installer
 - create directory and `install-config.yaml`
@@ -161,11 +161,44 @@ curl http://${HOST_IP}:${WEB_PORT}/install_dir/bootstrap.ign -o -
 
 Also double check the URLs we are going to **pass to the RHCOS installer kernel in the next commands**. Make sure that those URLs are reachable from inside the VMs.
 
+## 8. Firwall 
+- config firewall policy
 
-## 2. Create the Red Hat CoreOS and Load Balancer VMs
+```bash
+bash ~/lab-ocp-rhv/5-firewall.sh
+```
+## 9. Create the Red Hat CoreOS and Load Balancer VMs
 
 Before going through following procedures, you should make sure you can access your ignition, ing, and image, img, files.
 
+- spawn bootstrap, master (default 3), worker (default 2)
+
+```bash
+bash ~/lab-ocp-rhv/6-spawn.sh
+```
+
+- spawn lb
+
+```bash
+bash ~/lab-ocp-rhv/7-lb.sh
+```
+
+- **[check]**
+```bash
+watch "virsh list --all | grep '${CLUSTER_NAME}-'"
+```
+
+## 10. Setup DNS and Load balancing
+
+- config dnsmasq and start all VMs
+```bash
+bash ~/lab-ocp-rhv/8-start-vm.sh
+```
+
+- add DHCP reservation
+```bash
+bash ~/lab-ocp-rhv/9-dhcp.sh
+```
 
 ### Precedure
 
