@@ -2,26 +2,30 @@
 
 ## 0.prerequisites
 
-### Install Dependencies
+-  Install Dependencies
 ```
 yum install git python3 libvirt-daemon-driver-network libguestfs-tools screen
 ```
-### **RHEL 7.6-7.9**
+- **RHEL 7.6-7.9**
 
 it's **important** that RHOCP4.2 only support RHEL 7.6-7.9, shown on
 [system requirement of RHEL](https://docs.openshift.com/container-platform/4.2/machine_management/more-rhel-compute.html#rhel-compute-requirements_more-rhel-compute)
 
-### SSH Private Key
+- SSH Private Key
 
 If you do not have an SSH key that is configured for password-less authentication on your computer,run the following command:
 
 `ssh-keygen -t rsa -b 4096 -N '' -f ~/.ssh/id_rsa`
 
-the ssh key would be used on the following. Also in the shell script you will download, it also comprises this step. So **skip** to next.
+The ssh key would be used on the following. Meanwhile you will download shellscript on next step, it also comprises this step. So feel free to **skip**.
 
+- use either NetworkManager or Dnsmasq
+
+This guide prefer to `NetworkManager`, so try to disable dnsmasq
+```
+systemctl disable dnsmasq
+```
 ## 1. Installation
-
-### Shell Script
 
 - download shell script
 ```bash
@@ -34,24 +38,37 @@ git clone https://github.com/rh-tam/lab-ocp-rhv.git
 source ~/lab-ocp-rhv/0-env
 ```
 
-## 1. Download Files and Setup Environment
-### Download images
+## 2. Few things about download files and environment
+
+- pull secret
+
+This `pull secret` allows you to authenticate with the services that are provided by the included authorities, including Quay.io, which serves the container images for OpenShift Container Platform components. 
+
+Here, we adopt UPI, `user-provisioned infrastructure` in ths guide.
+
+https://cloud.redhat.com/openshift/install/metal/user-provisioned
+
+- Download images
+
 `https://access.redhat.com/downloads/content/69/ver=/rhel---7/7.8/x86_64/product-software`
 
-- systemctl disable dnsmasq
+
 - issue where VMs cannot contact the hypervisor or to external networks
-`fixed by firewalld masquerade`.
 
+it can be fixed by **firewalld masquerade**.
 
-- Generate the ignition files
-
-```bash
-./openshift-install create ignition-configs --dir=./install_dir
-```
+the script is in `5-firwall.sh`
 
 - Start python's webserver, serving the `ocp4` directory 
 
 This step is **critical**. you MUST go `ocp4` then start the web server otherwise you won't be success on VM creating.
+
+you can use it by 
+```
+screen -S ${CLUSTER_NAME} -dm bash -c "python3 -m http.server ${WEB_PORT}"
+```
+
+also, you can create new terminal session, but remember that you should reclaim your env again and go `ocp4` directory
 
 ```bash
 python3 -m http.server ${WEB_PORT}

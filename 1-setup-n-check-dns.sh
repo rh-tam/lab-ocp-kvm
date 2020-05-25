@@ -1,5 +1,10 @@
 #!/bin/bash
 set -x
+
+
+echo -e "[main]\ndns=dnsmasq" > /etc/NetworkManager/conf.d/nm-dns.conf
+systemctl restart NetworkManager
+
 echo "1.2.3.4 test.local" >> /etc/hosts
 systemctl restart libvirtd
 
