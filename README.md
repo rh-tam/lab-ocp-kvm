@@ -1,4 +1,4 @@
-# lab-ocp-rhv
+# lab-ocp-kvm
 
 ## 0.prerequisites
 
@@ -30,12 +30,12 @@ systemctl disable dnsmasq
 - download shell script
 ```bash
 cd ~/
-git clone https://github.com/rh-tam/lab-ocp-rhv.git
+git clone https://github.com/rh-tam/lab-ocp-kvm.git
 ```
 
 - export env
 ```
-source ~/lab-ocp-rhv/0-env
+source ~/lab-ocp-kvm/0-env
 ```
 
 ## 2. Few things about download files and environment
@@ -77,7 +77,7 @@ python3 -m http.server ${WEB_PORT}
 
 - execute setup and check DNS
 ```
-bash ~/lab-ocp-rhv/1-setup-n-check-dns.sh
+bash ~/lab-ocp-kvm/1-setup-n-check-dns.sh
 ```
 
 - **[check]**
@@ -88,7 +88,7 @@ Check DNS and Srv work properly
 - source pull-secret-rhnuser
 
 ```
-source ~/lab-ocp-rhv/2-pull-secret-rhnuser
+source ~/lab-ocp-kvm/2-pull-secret-rhnuser
 ```
 
 - pull secret
@@ -121,7 +121,7 @@ the `3-rhcos-prepare.sh` will ask for the url
 let's go executing `3-rhcos-prepare.sh`
 
 ```
-bash ~/lab-ocp-rhv/3-rhcos-prepare.sh
+bash ~/lab-ocp-kvm/3-rhcos-prepare.sh
 ```
 
 it will **take a while**, around 1 hr depending on your internet bandwidth.
@@ -132,7 +132,7 @@ it will **take a while**, around 1 hr depending on your internet bandwidth.
 you can modify the parameters of `install-config.yaml` in `4-openshift-installer.sh`, then go executing
 
 ```bash
-bash ~/lab-ocp-rhv/4-openshift-installer.sh
+bash ~/lab-ocp-kvm/4-openshift-installer.sh
 ```
 
 it will create `ignition files` as well
@@ -165,7 +165,7 @@ Also double check the URLs we are going to **pass to the RHCOS installer kernel 
 - config firewall policy
 
 ```bash
-bash ~/lab-ocp-rhv/5-firewall.sh
+bash ~/lab-ocp-kvm/5-firewall.sh
 ```
 ## 9. Create the Red Hat CoreOS and Load Balancer VMs
 
@@ -174,13 +174,13 @@ Before going through following procedures, you should make sure you can access y
 - spawn bootstrap, master (default 3), worker (default 2)
 
 ```bash
-bash ~/lab-ocp-rhv/6-spawn.sh
+bash ~/lab-ocp-kvm/6-spawn.sh
 ```
 
 - spawn lb
 
 ```bash
-bash ~/lab-ocp-rhv/7-lb.sh
+bash ~/lab-ocp-kvm/7-lb.sh
 ```
 
 - **[check]**
@@ -205,12 +205,12 @@ Note that `Virt-install` should make all VMs `power-off` once it successfully fi
 
 - config dnsmasq and start all VMs
 ```bash
-bash ~/lab-ocp-rhv/8-start-vm.sh
+bash ~/lab-ocp-kvm/8-start-vm.sh
 ```
 
 - add DHCP reservation
 ```bash
-source ~/lab-ocp-rhv/9-dhcp
+source ~/lab-ocp-kvm/9-dhcp
 ```
 
 
@@ -218,14 +218,14 @@ source ~/lab-ocp-rhv/9-dhcp
 
 - configure load balancing (haproxy)
 ```bash
-bash ~/lab-ocp-rhv/10-haproxy.sh
+bash ~/lab-ocp-kvm/10-haproxy.sh
 ```
 
 - **[check]**
 make sure haproxy is configured properly
 
 ```bash
-bash ~/lab-ocp-rhv/11-check-haproxy.sh
+bash ~/lab-ocp-kvm/11-check-haproxy.sh
 ```
 
 ![image](https://user-images.githubusercontent.com/64194459/82631733-ccfd5200-9c28-11ea-8fcc-639a72de3ff2.png)
@@ -234,7 +234,7 @@ bash ~/lab-ocp-rhv/11-check-haproxy.sh
 
 - start OpenShift installation (UPI)
 ```bash
-bash ~/lab-ocp-rhv/12-bootstrap.sh
+bash ~/lab-ocp-kvm/12-bootstrap.sh
 ```
 - **[check]**
 ```bash
@@ -271,7 +271,7 @@ or `ctrl+c` with `python3 -m http.server ${WEB_PORT}`
 
 - remove bootstrap
 ```bash
-bash ~/lab-ocp-rhv/13-remove-bootstrap.sh
+bash ~/lab-ocp-kvm/13-remove-bootstrap.sh
 ```
 ## 13. Registry Setup
 - emptyDir
@@ -355,5 +355,5 @@ crictl logs <container id of discover>
 
 then re-run
 ```bash
-bash ~/lab-ocp-rhv/12-bootstrap.sh
+bash ~/lab-ocp-kvm/12-bootstrap.sh
 ```
