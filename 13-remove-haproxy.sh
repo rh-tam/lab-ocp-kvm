@@ -11,5 +11,4 @@ EOF
 virsh destroy ${CLUSTER_NAME}-bootstrap
 virsh undefine ${CLUSTER_NAME}-bootstrap --remove-all-storage
 
-
 set +x

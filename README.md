@@ -73,6 +73,29 @@ also, you can create new terminal session, but remember that you should reclaim 
 ```bash
 python3 -m http.server ${WEB_PORT}
 ```
+## 3 Setup DNS
+
+- execute setup and check DNS
+```
+bash ~/lab-ocp-rhv/1-setup-n-check-dns.sh
+```
+
+## 4. Download UPI
+- source pull-secret-rhnuser
+
+```
+source ~/lab-ocp-rhv/2-pull-secret-rhnuser
+```
+
+- pull secret
+
+go visiting
+
+`https://cloud.redhat.com/openshift/install/metal/user-provisioned`
+
+to copy your pull_secret
+
+![image](https://user-images.githubusercontent.com/64194459/82781434-60828d00-9e8c-11ea-9331-718fc26919fe.png)
 
 ## 2. Create the Red Hat CoreOS and Load Balancer VMs
 
